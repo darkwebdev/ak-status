@@ -104,9 +104,8 @@ async function checkHttp(c) {
     body: c.body ? JSON.stringify(c.body) : undefined,
   });
   if (c.expectStatusBelow) {
-    await res.arrayBuffer();
-    if (res.status >= c.expectStatusBelow) return { state: 'down', message: `HTTP ${res.status}` };
-    return { state: 'up', message: `reachable (HTTP ${res.status})` };
+    if (res.status >= c.expectStatusBelow) return { state: 'down', message: `HTTP ${res.status}${await bodySnippet(res)}` };
+    return { state: 'up', message: `answered HTTP ${res.status}${(await bodySnippet(res)).slice(0, 100)}` };
   }
   const expected = c.expectStatus ?? 200;
   if (res.status !== expected) return { state: 'down', message: `expected HTTP ${expected}, got ${res.status}${await bodySnippet(res)}` };

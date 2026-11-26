@@ -145,11 +145,24 @@
           "slowMs": 5000
         },
         {
+          "id": "yostar-u8",
+          "name": "Game account server (u8)",
+          "description": "as.arknights.global token exchange answers an empty request with a non-5xx error",
+          "type": "http",
+          "method": "POST",
+          "url": "https://as.arknights.global/u8/user/v1/getToken",
+          "body": {},
+          "expectStatusBelow": 500,
+          "slowMs": 5000
+        },
+        {
           "id": "yostar-game-server",
           "name": "Game server",
-          "description": "gs.arknights.global answers (any non-5xx reply)",
+          "description": "gs.arknights.global account/login answers an empty request with a non-5xx error",
           "type": "http",
-          "url": "https://gs.arknights.global/",
+          "method": "POST",
+          "url": "https://gs.arknights.global/account/login",
+          "body": {},
           "expectStatusBelow": 500,
           "slowMs": 5000
         }

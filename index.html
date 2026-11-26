@@ -21,6 +21,11 @@
   h1 { font-size: 22px; margin: 0 0 16px; }
   .banner { border-radius: 10px; padding: 14px 16px; color: #fff; font-weight: 600;
     display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .banner a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+  .banner .sub { font-weight: 400; }
+  details.check { scroll-margin-top: 12px; }
+  details.check.flash { animation: flash 1.6s ease-out; }
+  @keyframes flash { 0%, 30% { background: color-mix(in srgb, var(--down) 14%, transparent); } 100% { background: transparent; } }
   .banner small { font-weight: 400; opacity: .9; }
   .banner.up { background: var(--up); } .banner.degraded { background: var(--degraded); color: #1b1f24; }
   .banner.down { background: var(--down); } .banner.unknown { background: var(--unknown); }
@@ -205,14 +210,15 @@ async function render() {
   const down = all.filter((c) => status.checks[c.id]?.state === 'down');
   const degraded = all.filter((c) => status.checks[c.id]?.state === 'degraded');
   const overall = down.length ? 'down' : degraded.length ? 'degraded' : 'up';
+  const jump = (c) => `<a href="#check-${esc(c.id)}" data-jump="${esc(c.id)}">${esc(c.name)}</a>`;
   const headline = down.length
-    ? `${down.length === 1 ? down[0].name + ' is' : down.length + ' checks are'} failing`
-    : degraded.length ? `${degraded.map((c) => c.name).join(', ')} degraded` : 'All systems operational';
+    ? `${down.length === 1 ? 'Failing:' : `${down.length} checks failing:`} ${down.map(jump).join(', ')}${degraded.length ? ` <span class="sub">· degraded: ${degraded.map(jump).join(', ')}</span>` : ''}`
+    : degraded.length ? `Degraded: ${degraded.map(jump).join(', ')}` : 'All systems operational';
   const color = getComputedStyle(document.documentElement).getPropertyValue(`--${overall}`).trim();
   document.getElementById('favicon').href = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='7' fill='${encodeURIComponent(color)}'/></svg>`;
 
   const nowSec = Date.now() / 1000;
-  let html = `<div class="banner ${overall}"><span>${esc(headline)}</span><small>Updated ${ago(status.updatedAt)}</small></div>`;
+  let html = `<div class="banner ${overall}"><span>${headline}</span><small>Updated ${ago(status.updatedAt)}</small></div>`;
   for (const g of config.groups) {
     html += `<h2>${esc(g.name)}</h2><div class="group">`;
     for (const c of g.checks) {
@@ -230,7 +236,7 @@ async function render() {
         r.log && ['Check log', r.log],
         href && [c.type === 'page' ? 'Open site' : 'Workflow runs', href],
       ].filter(Boolean);
-      html += `<details class="check" data-id="${esc(c.id)}"${openIds.has(c.id) ? ' open' : ''}>
+      html += `<details class="check" id="check-${esc(c.id)}" data-id="${esc(c.id)}"${openIds.has(c.id) ? ' open' : ''}>
         <summary>
           <div class="row"><span class="dot s${st}" title="${NAMES[st]}"></span><span class="name">${esc(c.name)}</span>
             <span class="right">${timing}${ups || NAMES[st]}</span><span class="chev" aria-hidden="true"></span></div>
@@ -249,8 +255,33 @@ async function render() {
   document.getElementById('app').innerHTML = html;
 }
 
+function jumpTo(id, smooth = true) {
+  const el = document.getElementById(`check-${id}`);
+  if (!el) return;
+  el.open = true;
+  openIds.add(id);
+  el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+  el.classList.remove('flash');
+  void el.offsetWidth;
+  el.classList.add('flash');
+}
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[data-jump]');
+  if (!a) return;
+  e.preventDefault();
+  history.replaceState(null, '', a.getAttribute('href'));
+  jumpTo(a.dataset.jump);
+});
+let jumpedFromHash = false;
+
 async function tick() {
-  try { await render(); }
+  try {
+    await render();
+    if (!jumpedFromHash && location.hash.startsWith('#check-')) {
+      jumpedFromHash = true;
+      jumpTo(location.hash.slice(7), false);
+    }
+  }
   catch (e) {
     document.getElementById('app').innerHTML = `<div class="error">Couldn't load status data. The first check run may not have finished yet.<br><small>${esc(e.message)}</small></div>`;
   }

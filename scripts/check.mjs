@@ -61,6 +61,15 @@ function slow(check, result) {
   return result;
 }
 
+async function bodySnippet(res) {
+  try {
+    const t = (await res.text()).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    return t ? `: ${t.slice(0, 160)}` : '';
+  } catch {
+    return '';
+  }
+}
+
 function dig(obj, p) {
   return p.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
 }
@@ -93,9 +102,9 @@ async function checkHttp(c) {
     headers: c.body ? { 'Content-Type': 'application/json' } : {},
     body: c.body ? JSON.stringify(c.body) : undefined,
   });
-  await res.arrayBuffer();
   const expected = c.expectStatus ?? 200;
-  if (res.status !== expected) return { state: 'down', message: `expected HTTP ${expected}, got ${res.status}` };
+  if (res.status !== expected) return { state: 'down', message: `expected HTTP ${expected}, got ${res.status}${await bodySnippet(res)}` };
+  await res.arrayBuffer();
   return { state: 'up', message: `HTTP ${res.status} as expected` };
 }
 
@@ -105,7 +114,7 @@ async function checkGraphql(c) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query: c.query }),
   });
-  if (!res.ok) return { state: 'down', message: `HTTP ${res.status}` };
+  if (!res.ok) return { state: 'down', message: `HTTP ${res.status}${await bodySnippet(res)}` };
   const json = await res.json();
   if (json.errors?.length) return { state: 'down', message: `GraphQL error: ${json.errors[0].message}`.slice(0, 300) };
   const got = dig(json.data, c.expect.path);
@@ -190,15 +199,22 @@ async function syncIssues(checks, results, prev) {
   const pageUrl = `https://${process.env.GITHUB_REPOSITORY.split('/')[0]}.github.io/${process.env.GITHUB_REPOSITORY.split('/')[1]}/`;
   for (const c of checks) {
     const r = results[c.id];
-    if (!r || r.skipped) continue;
+    if (!r) continue;
     const issue = byCheck.get(c.id);
+    if (r.skipped) {
+      if (r.state === 'down' && issue) r.issue = issue.html_url;
+      continue;
+    }
     if (r.state === 'down' && !issue && r.failures >= config.issueAfterFailures) {
-      await ghIssues('POST', '/issues', {
+      const created = await ghIssues('POST', '/issues', {
         title: `🔴 ${c.name} is down`,
         labels: ['outage'],
         body: `<!-- check:${c.id} -->\n**${c.name}** has failed ${r.failures} checks in a row.\n\n- Error: \`${r.message}\`\n${c.url ? `- URL: ${c.url}\n` : ''}${r.link ? `- Run: ${r.link}\n` : ''}- Since: ${r.downSince}\n\n[Status page](${pageUrl}). This issue closes by itself when the check recovers.`,
       });
+      r.issue = created.html_url;
       console.log(`opened issue for ${c.id}`);
+    } else if (r.state === 'down' && issue) {
+      r.issue = issue.html_url;
     } else if (r.state !== 'down' && issue) {
       await ghIssues('POST', `/issues/${issue.number}/comments`, { body: `🟢 Recovered at ${now.toISOString()}: ${r.message}` });
       await ghIssues('PATCH', `/issues/${issue.number}`, { state: 'closed', state_reason: 'completed' });
@@ -254,6 +270,19 @@ for (const c of checks) {
 for (const id of Object.keys(history)) if (!results[id]) delete history[id];
 for (const id of Object.keys(daily)) if (!results[id]) delete daily[id];
 
+try {
+  await syncIssues(checks, results, prev);
+} catch (e) {
+  console.error(`issue sync failed: ${e.message}`);
+}
+const runUrl = process.env.GITHUB_RUN_ID
+  ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+  : undefined;
+for (const r of Object.values(results)) {
+  if (!r.skipped) r.log = runUrl;
+  if (r.state !== 'down') delete r.issue;
+}
+
 const states = Object.values(results).map((r) => r.state);
 const overall = states.includes('down') ? 'down' : states.includes('degraded') ? 'degraded' : 'up';
 const checksOut = Object.fromEntries(Object.entries(results).map(([id, { skipped, ...r }]) => [id, r]));
@@ -264,9 +293,4 @@ await fs.writeFile(path.join(dataDir, 'status.json'), JSON.stringify(status, nul
 await fs.writeFile(path.join(dataDir, 'history.json'), JSON.stringify(history));
 await fs.writeFile(path.join(dataDir, 'daily.json'), JSON.stringify(daily));
 
-try {
-  await syncIssues(checks, results, prev);
-} catch (e) {
-  console.error(`issue sync failed: ${e.message}`);
-}
 console.log(`overall: ${overall}`);

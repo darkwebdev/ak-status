@@ -137,7 +137,7 @@ async function render() {
         <div class="row"><span class="dot s${st}" title="${NAMES[st]}"></span><span class="name">${name}</span>
           <span class="right">${timing}${ups || NAMES[st]}</span></div>
         ${c.description ? `<div class="desc">${esc(c.description)}</div>` : ''}
-        <div class="msg ${r.state}">${NAMES[st]}: ${esc(r.message)}${r.link ? ` · <a href="${esc(r.link)}" target="_blank" rel="noopener">run</a>` : ''} · ${ago(r.checkedAt)}</div>
+        <div class="msg ${r.state}">${NAMES[st]}: ${esc(r.message)}${[r.issue && ['outage issue', r.issue], r.link && ['workflow run', r.link], r.state !== 'up' && r.log && ['check log', r.log]].filter(Boolean).map(([t, u]) => ` · <a href="${esc(u)}" target="_blank" rel="noopener">${t}</a>`).join('')} · ${ago(r.checkedAt)}</div>
         <div class="bars">${dayBars(daily[c.id])}</div>
         <div class="legend"><span><span class="full">90 days ago</span><span class="short" style="display:none">30 days ago</span></span><span>Today</span></div>
       </div>`;

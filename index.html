@@ -26,6 +26,16 @@
   details.check { scroll-margin-top: 12px; }
   details.check.flash { animation: flash 1.6s ease-out; }
   @keyframes flash { 0%, 30% { background: color-mix(in srgb, var(--down) 14%, transparent); } 100% { background: transparent; } }
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; }
+  .stat .num { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .stat .lbl { color: var(--muted); font-size: 12px; }
+  .stat.up .num { color: var(--up); } .stat.degraded .num { color: var(--degraded); }
+  .stat.down .num { color: var(--down); } .stat.unknown .num { color: var(--unknown); }
+  .stat.zero .num { color: var(--muted); opacity: .5; }
+  h2 { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .gcount { text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .gcount b { color: var(--text); }
   .banner small { font-weight: 400; opacity: .9; }
   .banner.up { background: var(--up); } .banner.degraded { background: var(--degraded); color: #1b1f24; }
   .banner.down { background: var(--down); } .banner.unknown { background: var(--unknown); }
@@ -230,9 +240,23 @@ async function render() {
   document.getElementById('favicon').href = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='7' fill='${encodeURIComponent(color)}'/></svg>`;
 
   const nowSec = Date.now() / 1000;
-  let html = `<div class="banner ${overall}"><span>${headline}</span><small>Updated ${ago(status.updatedAt)}</small></div>`;
+  const tally = (checks) => {
+    const n = { up: 0, degraded: 0, down: 0, unknown: 0 };
+    for (const c of checks) n[status.checks[c.id]?.state in n ? status.checks[c.id].state : 'unknown']++;
+    return n;
+  };
+  const chips = (n, total) => [
+    `<b>${n.up}/${total}</b> up`,
+    n.degraded && `${n.degraded} degraded`,
+    n.down && `${n.down} down`,
+    n.unknown && `${n.unknown} unknown`,
+  ].filter(Boolean).join(' · ');
+  const totals = tally(all);
+  let html = `<div class="banner ${overall}"><span>${headline}</span><small>Updated ${ago(status.updatedAt)}</small></div>
+    <div class="summary">${['up', 'degraded', 'down', 'unknown'].map((k) => `<div class="stat ${k}${totals[k] ? '' : ' zero'}"><span class="num">${totals[k]}</span><span class="lbl">${k === 'up' ? `of ${all.length} up` : k}</span></div>`).join('')}</div>`;
   for (const g of config.groups) {
-    html += `<h2>${esc(g.name)}</h2><div class="group">`;
+    const gt = tally(g.checks);
+    html += `<h2><span>${esc(g.name)}</span><span class="gcount">${chips(gt, g.checks.length)}</span></h2><div class="group">`;
     for (const c of g.checks) {
       const r = status.checks[c.id] || { state: 'unknown', message: 'not checked yet' };
       const h = history[c.id] || [];

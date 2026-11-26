@@ -106,7 +106,7 @@
       ]
     },
     {
-      "name": "Yostar (direct, not via ak-account)",
+      "name": "Global game servers (direct, not via ak-account)",
       "checks": [
         {
           "id": "yostar-network-config",
@@ -120,14 +120,35 @@
           "slowMs": 5000
         },
         {
+          "id": "yostar-remote-config",
+          "name": "Remote config",
+          "description": "ak-conf.arknights.global remote_config the client loads at startup",
+          "type": "json",
+          "url": "https://ak-conf.arknights.global/config/prod/official/remote_config",
+          "slowMs": 5000
+        },
+        {
           "id": "yostar-version",
-          "name": "Game version server",
-          "description": "current EN client and resource version",
+          "name": "Game version",
+          "description": "live Global (EN) client and resource versions",
           "type": "json",
           "url": "https://ark-us-static-online.yo-star.com/assetbundle/official/Android/version",
           "expect": {
             "path": "resVersion"
           },
+          "slowMs": 5000,
+          "info": {
+            "Client": "clientVersion",
+            "Resources": "resVersion"
+          }
+        },
+        {
+          "id": "yostar-asset-cdn",
+          "name": "Asset CDN",
+          "description": "the current version's hot_update_list.json on ark-us-static-online.yo-star.com",
+          "type": "assetcdn",
+          "versionUrl": "https://ark-us-static-online.yo-star.com/assetbundle/official/Android/version",
+          "assetBase": "https://ark-us-static-online.yo-star.com/assetbundle/official",
           "slowMs": 5000
         },
         {

@@ -140,7 +140,11 @@ function whatIsChecked(c) {
     case 'graphql':
       return `POST ${code(c.url)} with ${code(c.query)}, expects ${code(c.expect.path)} = ${code(JSON.stringify(c.expect.equals))}.`;
     case 'json':
-      return `GET ${code(c.url)}, expects JSON with ${code(c.expect.path)}${'equals' in c.expect ? ` = ${code(JSON.stringify(c.expect.equals))}` : ' present'}.`;
+      return c.expect
+        ? `GET ${code(c.url)}, expects JSON with ${code(c.expect.path)}${'equals' in c.expect ? ` = ${code(JSON.stringify(c.expect.equals))}` : ' present'}.`
+        : `GET ${code(c.url)}, expects a non-empty JSON object.`;
+    case 'assetcdn':
+      return `Reads the live ${code('resVersion')} from ${code(c.versionUrl)}, then GETs ${code(c.assetBase + '/Android/assets/<resVersion>/hot_update_list.json')}, which must list asset bundles.`;
     case 'yostarplat':
       return `Signed POST (like the game client) to ${code(c.url)} with ${code(JSON.stringify(c.body))}. Yostar must answer with a JSON <code>Code</code>. The email is malformed on purpose, so nothing is sent.`;
     case 'cors':
@@ -184,6 +188,10 @@ function detailsHtml(c, r, h, nowSec) {
     ['Last check', `${fmtTime(r.checkedAt)}${r.ms != null && c.type !== 'workflow' ? ` · ${r.ms} ms` : ''}`],
     ['Result', `<span class="msg ${r.state}" style="margin:0">${esc(r.message)}</span>`],
   ];
+  if (r.info) {
+    for (const [k, v] of Object.entries(r.info)) rows.push([k, `<code>${esc(v)}</code>`]);
+    rows.push(['Last version change', r.infoChangedAt ? `${fmtTime(Date.parse(r.infoChangedAt) / 1000)} (${ago(Date.parse(r.infoChangedAt) / 1000)})` : 'not seen yet (tracking since this check was added)']);
+  }
   if (r.state === 'down') rows.push(['Down since', `${fmtTime(Date.parse(r.downSince) / 1000)} (${fmtDur(nowSec - Date.parse(r.downSince) / 1000)}) · ${r.failures} failed checks in a row`]);
   const inc = incidents(h).slice(0, 5);
   const incHtml = inc.length

@@ -150,11 +150,39 @@ async function checkJson(c) {
   } catch {
     return { state: 'down', message: 'response is not JSON' };
   }
+  if (!c.expect) {
+    const keys = json && typeof json === 'object' ? Object.keys(json).length : 0;
+    return keys ? { state: 'up', message: `valid JSON (${keys} top-level keys)` } : { state: 'down', message: 'empty JSON response' };
+  }
   const got = dig(json, c.expect.path);
   if (got == null || ('equals' in c.expect && got !== c.expect.equals)) {
     return { state: 'down', message: `expected ${c.expect.path}${'equals' in c.expect ? ` = ${JSON.stringify(c.expect.equals)}` : ' to be present'}, got ${JSON.stringify(got)}`.slice(0, 300) };
   }
+  if (c.info) {
+    const info = Object.fromEntries(Object.entries(c.info).map(([label, path]) => [label, dig(json, path) ?? null]));
+    return { state: 'up', message: Object.entries(info).map(([k, v]) => `${k} ${v}`).join(' · '), info };
+  }
   return { state: 'up', message: `${c.expect.path} = ${JSON.stringify(got).slice(0, 80)}` };
+}
+
+// The game's asset CDN: read the live resVersion, then fetch that version's
+// hot_update_list.json - the first file a client downloads when updating.
+async function checkAssetCdn(c) {
+  const v = await req(c.versionUrl);
+  if (!v.ok) return { state: 'down', message: `version file HTTP ${v.status}` };
+  const { resVersion } = await v.json();
+  const url = `${c.assetBase}/Android/assets/${resVersion}/hot_update_list.json`;
+  const res = await req(url);
+  if (!res.ok) return { state: 'down', message: `hot_update_list.json for ${resVersion}: HTTP ${res.status}${await bodySnippet(res)}` };
+  let list;
+  try {
+    list = await res.json();
+  } catch {
+    return { state: 'down', message: `hot_update_list.json for ${resVersion} is not JSON` };
+  }
+  const n = list.abInfos?.length;
+  if (!n) return { state: 'down', message: `hot_update_list.json for ${resVersion} lists no asset bundles` };
+  return { state: 'up', message: `hot_update_list.json for ${resVersion}: ${n} asset bundles` };
 }
 
 // Yostar's account SDK (the email-code login backend), called directly and signed the
@@ -234,7 +262,7 @@ async function checkWorkflow(c) {
   return { state: 'up', message: `last run succeeded ${when.toISOString().slice(0, 16)}Z`, link };
 }
 
-const runners = { json: checkJson, yostarplat: checkYostarplat, page: checkPage, http: checkHttp, graphql: checkGraphql, cors: checkCors, workflow: checkWorkflow };
+const runners = { assetcdn: checkAssetCdn, json: checkJson, yostarplat: checkYostarplat, page: checkPage, http: checkHttp, graphql: checkGraphql, cors: checkCors, workflow: checkWorkflow };
 
 // --- issues --------------------------------------------------------------
 
@@ -314,7 +342,13 @@ await Promise.all(
     r = slow(c, r);
     const failures = r.state === 'down' ? (old?.state === 'down' ? (old.failures || 1) + 1 : 1) : 0;
     const downSince = r.state === 'down' ? (old?.state === 'down' ? old.downSince : now.toISOString()) : undefined;
-    results[c.id] = { state: r.state, message: r.message, ms: r.ms, link: r.link, checkedAt: nowSec, failures, downSince };
+    let infoChangedAt = old?.infoChangedAt;
+    if (r.info) {
+      if (!old?.info) infoChangedAt = undefined;
+      else if (JSON.stringify(old.info) !== JSON.stringify(r.info)) infoChangedAt = now.toISOString();
+    }
+    const info = r.info || (r.state === 'up' ? undefined : old?.info);
+    results[c.id] = { state: r.state, message: r.message, ms: r.ms, link: r.link, checkedAt: nowSec, failures, downSince, info, infoChangedAt };
     console.log(`${r.state.padEnd(8)} ${String(r.ms).padStart(6)}ms  ${c.id}: ${r.message}`);
   }),
 );

@@ -12,7 +12,7 @@
           "name": "ak-events",
           "type": "page",
           "url": "https://darkwebdev.github.io/ak-events/",
-          "contains": "<div id=\"root\"",
+          "contains": "id=\"ak-root\"",
           "slowMs": 3000
         },
         {
@@ -37,7 +37,8 @@
           "name": "ric",
           "type": "page",
           "url": "https://darkwebdev.github.io/ric/",
-          "slowMs": 3000
+          "slowMs": 3000,
+          "contains": "id=\"app\""
         }
       ]
     },
@@ -51,7 +52,10 @@
           "type": "graphql",
           "url": "https://ak-account-api-705516204230.us-central1.run.app/graphql",
           "query": "query { operators(ids: [\"char_002_amiya\"]) { charId } }",
-          "expect": { "path": "operators.0.charId", "equals": "char_002_amiya" },
+          "expect": {
+            "path": "operators.0.charId",
+            "equals": "char_002_amiya"
+          },
           "slowMs": 5000
         },
         {
@@ -69,7 +73,10 @@
           "type": "http",
           "method": "POST",
           "url": "https://ak-account-api-705516204230.us-central1.run.app/auth/game-code",
-          "body": { "email": "not-an-email", "server": "en" },
+          "body": {
+            "email": "not-an-email",
+            "server": "en"
+          },
           "expectStatus": 422
         },
         {
@@ -79,7 +86,10 @@
           "type": "graphql",
           "url": "https://ak-account-api-705516204230.us-central1.run.app/graphql",
           "query": "query { searchPlayers(nickname: \"Amiya\", limit: 1) { ok } }",
-          "expect": { "path": "searchPlayers.ok", "equals": true },
+          "expect": {
+            "path": "searchPlayers.ok",
+            "equals": true
+          },
           "everyMinutes": 15,
           "slowMs": 10000
         },
@@ -128,7 +138,7 @@
       ]
     },
     {
-      "name": "Deploys and CI",
+      "name": "Deploys",
       "checks": [
         {
           "id": "deploy-ak-events",
@@ -144,22 +154,6 @@
           "type": "workflow",
           "repo": "darkwebdev/ak-chars",
           "workflow": "gh-pages.yml",
-          "everyMinutes": 30
-        },
-        {
-          "id": "deploy-ric",
-          "name": "ric deploy",
-          "type": "workflow",
-          "repo": "darkwebdev/ric",
-          "workflow": "deploy.yml",
-          "everyMinutes": 30
-        },
-        {
-          "id": "ci-macos-client",
-          "name": "macOS client CI",
-          "type": "workflow",
-          "repo": "darkwebdev/Arknights-MacOS-Client",
-          "workflow": "ci.yml",
           "everyMinutes": 30
         }
       ]

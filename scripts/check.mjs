@@ -235,7 +235,7 @@ await Promise.all(
   checks.map(async (c) => {
     const old = prev.checks?.[c.id];
     const dueSec = (c.everyMinutes || 0) * 60 - 30;
-    if (!process.env.FORCE && old && nowSec - old.checkedAt < dueSec) {
+    if (!process.env.FORCE && old && old.state !== 'down' && nowSec - old.checkedAt < dueSec) {
       results[c.id] = { ...old, skipped: true };
       return;
     }

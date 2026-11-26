@@ -15,6 +15,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import crypto from 'node:crypto';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const dataDir = path.resolve(process.argv[2] || path.join(root, 'data'));
@@ -102,6 +103,11 @@ async function checkHttp(c) {
     headers: c.body ? { 'Content-Type': 'application/json' } : {},
     body: c.body ? JSON.stringify(c.body) : undefined,
   });
+  if (c.expectStatusBelow) {
+    await res.arrayBuffer();
+    if (res.status >= c.expectStatusBelow) return { state: 'down', message: `HTTP ${res.status}` };
+    return { state: 'up', message: `reachable (HTTP ${res.status})` };
+  }
   const expected = c.expectStatus ?? 200;
   if (res.status !== expected) return { state: 'down', message: `expected HTTP ${expected}, got ${res.status}${await bodySnippet(res)}` };
   await res.arrayBuffer();
@@ -122,6 +128,55 @@ async function checkGraphql(c) {
     return { state: 'down', message: `expected ${c.expect.path} = ${JSON.stringify(c.expect.equals)}, got ${JSON.stringify(got)}` };
   }
   return { state: 'up', message: 'response as expected' };
+}
+
+async function checkJson(c) {
+  const res = await req(c.url, { headers: { Accept: 'application/json' } });
+  if (!res.ok) return { state: 'down', message: `HTTP ${res.status}${await bodySnippet(res)}` };
+  let json;
+  try {
+    json = await res.json();
+  } catch {
+    return { state: 'down', message: 'response is not JSON' };
+  }
+  const got = dig(json, c.expect.path);
+  if (got == null || ('equals' in c.expect && got !== c.expect.equals)) {
+    return { state: 'down', message: `expected ${c.expect.path}${'equals' in c.expect ? ` = ${JSON.stringify(c.expect.equals)}` : ' to be present'}, got ${JSON.stringify(got)}`.slice(0, 300) };
+  }
+  return { state: 'up', message: `${c.expect.path} = ${JSON.stringify(got).slice(0, 80)}` };
+}
+
+// Yostar's account SDK (the email-code login backend), called directly and signed the
+// same way the game client does (see arkprts auth.generate_yostarplat_headers). The
+// probe sends a deliberately malformed email, so Yostar rejects it and no mail is sent;
+// a well-formed JSON reply with a Code proves the login API is up.
+async function checkYostarplat(c) {
+  const body = JSON.stringify(c.body);
+  const head = {
+    PID: 'US-ARKNIGHTS', Channel: 'googleplay', Platform: 'android', Version: '4.10.0', GVersionNo: '2000112',
+    GBuildNo: '', Lang: 'en', DeviceID: crypto.randomUUID(), DeviceModel: 'F9', UID: '', Token: '',
+    Time: Math.floor(Date.now() / 1000),
+  };
+  const sign = crypto.createHash('md5').update(JSON.stringify(head) + body + '886c085e4a8d30a703367b120dd8353948405ec2').digest('hex').toUpperCase();
+  const res = await req(c.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: JSON.stringify({ Head: head, Sign: sign }) },
+    body,
+  });
+  if (!res.ok) return { state: 'down', message: `HTTP ${res.status}${await bodySnippet(res)}` };
+  const text = await res.text();
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return { state: 'down', message: `not a Yostar JSON reply: ${text.slice(0, 120)}` };
+  }
+  if (typeof json.Code !== 'number') return { state: 'down', message: `unexpected reply: ${text.slice(0, 160)}` };
+  const okCodes = c.okCodes || [];
+  if (okCodes.length && !okCodes.includes(json.Code)) {
+    return { state: 'down', message: `Yostar replied Code ${json.Code}: ${String(json.Msg ?? '').slice(0, 120)}` };
+  }
+  return { state: 'up', message: `Yostar replied Code ${json.Code}${json.Msg ? ` (${String(json.Msg).slice(0, 80)})` : ''}` };
 }
 
 async function checkCors(c) {
@@ -168,7 +223,7 @@ async function checkWorkflow(c) {
   return { state: 'up', message: `last run succeeded ${when.toISOString().slice(0, 16)}Z`, link };
 }
 
-const runners = { page: checkPage, http: checkHttp, graphql: checkGraphql, cors: checkCors, workflow: checkWorkflow };
+const runners = { json: checkJson, yostarplat: checkYostarplat, page: checkPage, http: checkHttp, graphql: checkGraphql, cors: checkCors, workflow: checkWorkflow };
 
 // --- issues --------------------------------------------------------------
 

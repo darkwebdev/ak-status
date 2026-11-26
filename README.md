@@ -16,8 +16,10 @@ Status page for the Arknights tools: ak-events, ak-chars, ric, the ak-account AP
 | type | passes when |
 |---|---|
 | `page` | URL returns 200, contains `contains`, and its `<script src>` bundles load (catches half-broken deploys) |
-| `http` | `method` + JSON `body` returns `expectStatus` |
+| `http` | `method` + JSON `body` returns `expectStatus` (or anything below `expectStatusBelow`) |
 | `graphql` | query returns no errors and `expect.path` equals `expect.equals` |
+| `json` | GET returns JSON where `expect.path` is present (or equals `expect.equals`) |
+| `yostarplat` | signed POST to Yostar's account SDK, like the game client; passes if Yostar answers with a JSON `Code` |
 | `cors` | an `OPTIONS` preflight from `origin` is allowed |
 | `workflow` | the latest completed run of a GitHub Actions workflow succeeded, and (with `maxAgeHours`) the last success is recent enough |
 

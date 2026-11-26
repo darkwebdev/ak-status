@@ -81,8 +81,8 @@
         },
         {
           "id": "yostar-guest",
-          "name": "Yostar game servers",
-          "description": "searchPlayers through the API (guest session, never touches your account)",
+          "name": "Yostar via ak-account",
+          "description": "searchPlayers through ak-account (guest session, never touches your account)",
           "type": "graphql",
           "url": "https://ak-account-api-705516204230.us-central1.run.app/graphql",
           "query": "query { searchPlayers(nickname: \"Amiya\", limit: 1) { ok } }",
@@ -102,6 +102,56 @@
           "workflow": "integration-tests.yml",
           "maxAgeHours": 26,
           "everyMinutes": 30
+        }
+      ]
+    },
+    {
+      "name": "Yostar (direct, not via ak-account)",
+      "checks": [
+        {
+          "id": "yostar-network-config",
+          "name": "Game network config",
+          "description": "Yostar's config CDN that tells the game which servers to use",
+          "type": "json",
+          "url": "https://ak-conf.arknights.global/config/prod/official/network_config",
+          "expect": {
+            "path": "content"
+          },
+          "slowMs": 5000
+        },
+        {
+          "id": "yostar-version",
+          "name": "Game version server",
+          "description": "current EN client and resource version",
+          "type": "json",
+          "url": "https://ark-us-static-online.yo-star.com/assetbundle/official/Android/version",
+          "expect": {
+            "path": "resVersion"
+          },
+          "slowMs": 5000
+        },
+        {
+          "id": "yostar-sdk-login",
+          "name": "Yostar login API",
+          "description": "yostarplat send-code with a malformed email: Yostar must answer, no email is sent",
+          "type": "yostarplat",
+          "url": "https://en-sdk-api.yostarplat.com/yostar/send-code",
+          "body": {
+            "Account": "status-probe",
+            "Randstr": "",
+            "Ticket": ""
+          },
+          "everyMinutes": 15,
+          "slowMs": 5000
+        },
+        {
+          "id": "yostar-game-server",
+          "name": "Game server",
+          "description": "gs.arknights.global answers (any non-5xx reply)",
+          "type": "http",
+          "url": "https://gs.arknights.global/",
+          "expectStatusBelow": 500,
+          "slowMs": 5000
         }
       ]
     },

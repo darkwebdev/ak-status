@@ -1,0 +1,72 @@
+name: Check services
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Run every check now, ignoring per-check intervals'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write # push results to the data branch
+  issues: write # open/close outage issues
+  actions: write # keep-alive below
+
+concurrency:
+  group: check-services
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Fetch previous results
+        run: |
+          mkdir data
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch --depth 1 origin data
+            git archive FETCH_HEAD | tar -x -C data
+          fi
+
+      - name: Make sure the outage label exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh label create outage --color B60205 --description 'Opened by the status checks' 2>/dev/null || true
+
+      - name: Run checks
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          STATUS_GH_TOKEN: ${{ secrets.STATUS_GH_TOKEN }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force && '1' || '' }}
+        run: node scripts/check.mjs data
+
+      - name: Save results
+        # The data branch is always a single commit: history lives in history.json/daily.json,
+        # so there's no point growing a git log by 288 commits a day.
+        run: |
+          cd data
+          git init -q -b data
+          git config user.name 'ak-status bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -q -m "Status $(date -u +%Y-%m-%dT%H:%MZ): $(node -p "require('./status.json').overall")"
+          git remote add origin "$(git -C .. remote get-url origin)"
+          git -c http.extraheader="$(git -C .. config --get http.https://github.com/.extraheader)" push -f origin data
+
+      - name: Keep the schedule alive
+        # GitHub turns off cron workflows after 60 days without repo activity. Re-enabling
+        # the workflow (a no-op while it's on) resets that clock. One cheap API call.
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/check.yml/enable" || true

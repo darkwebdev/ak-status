@@ -1,0 +1,168 @@
+{
+  "title": "Arknights tools status",
+  "issueAfterFailures": 2,
+  "historyDays": 7,
+  "dailyDays": 90,
+  "groups": [
+    {
+      "name": "Websites",
+      "checks": [
+        {
+          "id": "ak-events",
+          "name": "ak-events",
+          "type": "page",
+          "url": "https://darkwebdev.github.io/ak-events/",
+          "contains": "<div id=\"root\"",
+          "slowMs": 3000
+        },
+        {
+          "id": "ak-events-storybook",
+          "name": "ak-events Storybook",
+          "type": "page",
+          "url": "https://darkwebdev.github.io/ak-events/storybook/",
+          "contains": "storybook",
+          "assets": false,
+          "slowMs": 3000
+        },
+        {
+          "id": "ak-chars",
+          "name": "ak-chars",
+          "type": "page",
+          "url": "https://darkwebdev.github.io/ak-chars/",
+          "contains": "<div id=\"root\"",
+          "slowMs": 3000
+        },
+        {
+          "id": "ric",
+          "name": "ric",
+          "type": "page",
+          "url": "https://darkwebdev.github.io/ric/",
+          "slowMs": 3000
+        }
+      ]
+    },
+    {
+      "name": "Account API and login",
+      "checks": [
+        {
+          "id": "api-graphql",
+          "name": "API GraphQL",
+          "description": "operators query returns Amiya",
+          "type": "graphql",
+          "url": "https://ak-account-api-705516204230.us-central1.run.app/graphql",
+          "query": "query { operators(ids: [\"char_002_amiya\"]) { charId } }",
+          "expect": { "path": "operators.0.charId", "equals": "char_002_amiya" },
+          "slowMs": 5000
+        },
+        {
+          "id": "api-cors",
+          "name": "Browser access (CORS)",
+          "description": "preflight from darkwebdev.github.io is allowed",
+          "type": "cors",
+          "url": "https://ak-account-api-705516204230.us-central1.run.app/graphql",
+          "origin": "https://darkwebdev.github.io"
+        },
+        {
+          "id": "api-auth-endpoint",
+          "name": "Login endpoint",
+          "description": "POST /auth/game-code rejects a malformed email with 422",
+          "type": "http",
+          "method": "POST",
+          "url": "https://ak-account-api-705516204230.us-central1.run.app/auth/game-code",
+          "body": { "email": "not-an-email", "server": "en" },
+          "expectStatus": 422
+        },
+        {
+          "id": "yostar-guest",
+          "name": "Yostar game servers",
+          "description": "searchPlayers through the API (guest session, never touches your account)",
+          "type": "graphql",
+          "url": "https://ak-account-api-705516204230.us-central1.run.app/graphql",
+          "query": "query { searchPlayers(nickname: \"Amiya\", limit: 1) { ok } }",
+          "expect": { "path": "searchPlayers.ok", "equals": true },
+          "everyMinutes": 15,
+          "slowMs": 10000
+        },
+        {
+          "id": "full-login",
+          "name": "Full email-code login",
+          "description": "ak-account's daily Integration Tests run (real Yostar email code login)",
+          "type": "workflow",
+          "repo": "darkwebdev/ak-account",
+          "workflow": "integration-tests.yml",
+          "maxAgeHours": 26,
+          "everyMinutes": 30
+        }
+      ]
+    },
+    {
+      "name": "Data jobs",
+      "checks": [
+        {
+          "id": "job-ak-events-scrape",
+          "name": "ak-events daily scrape",
+          "type": "workflow",
+          "repo": "darkwebdev/ak-events",
+          "workflow": "scrape.yml",
+          "maxAgeHours": 26,
+          "everyMinutes": 30
+        },
+        {
+          "id": "job-ak-chars-data",
+          "name": "ak-chars data update",
+          "type": "workflow",
+          "repo": "darkwebdev/ak-chars",
+          "workflow": "update-data.yml",
+          "maxAgeHours": 26,
+          "everyMinutes": 30
+        },
+        {
+          "id": "job-ric-data",
+          "name": "ric game data fetch",
+          "type": "workflow",
+          "repo": "darkwebdev/ric",
+          "workflow": "fetch-game-data.yml",
+          "maxAgeHours": 26,
+          "everyMinutes": 30
+        }
+      ]
+    },
+    {
+      "name": "Deploys and CI",
+      "checks": [
+        {
+          "id": "deploy-ak-events",
+          "name": "ak-events deploy",
+          "type": "workflow",
+          "repo": "darkwebdev/ak-events",
+          "workflow": "deploy-pages.yml",
+          "everyMinutes": 30
+        },
+        {
+          "id": "deploy-ak-chars",
+          "name": "ak-chars deploy",
+          "type": "workflow",
+          "repo": "darkwebdev/ak-chars",
+          "workflow": "gh-pages.yml",
+          "everyMinutes": 30
+        },
+        {
+          "id": "deploy-ric",
+          "name": "ric deploy",
+          "type": "workflow",
+          "repo": "darkwebdev/ric",
+          "workflow": "deploy.yml",
+          "everyMinutes": 30
+        },
+        {
+          "id": "ci-macos-client",
+          "name": "macOS client CI",
+          "type": "workflow",
+          "repo": "darkwebdev/Arknights-MacOS-Client",
+          "workflow": "ci.yml",
+          "everyMinutes": 30
+        }
+      ]
+    }
+  ]
+}

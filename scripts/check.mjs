@@ -209,7 +209,7 @@ async function syncIssues(checks, results, prev) {
       const created = await ghIssues('POST', '/issues', {
         title: `🔴 ${c.name} is down`,
         labels: ['outage'],
-        body: `<!-- check:${c.id} -->\n**${c.name}** has failed ${r.failures} checks in a row.\n\n- Error: \`${r.message}\`\n${c.url ? `- URL: ${c.url}\n` : ''}${r.link ? `- Run: ${r.link}\n` : ''}- Since: ${r.downSince}\n\n[Status page](${pageUrl}). This issue closes by itself when the check recovers.`,
+        body: `<!-- check:${c.id} -->\n**${c.name}** has failed ${r.failures} checks in a row.\n\n- Error: \`${r.message}\`\n${c.url ? `- URL: ${c.url}\n` : ''}${r.link ? `- Run: ${r.link}\n` : ''}- Since: ${r.downSince}\n\n[Status page](${pageUrl}#check-${c.id}). This issue closes by itself when the check recovers.`,
       });
       r.issue = created.html_url;
       console.log(`opened issue for ${c.id}`);

@@ -45,6 +45,28 @@
   footer a { color: inherit; }
   .error { background: var(--card); border: 1px solid var(--down); padding: 16px; border-radius: 10px; }
   @media (max-width: 560px) { .bars i:nth-child(-n+60) { display: none; } .legend .full { display: none; } .legend .short { display: inline !important; } .wide { display: none; } }
+  details.check > summary { list-style: none; cursor: pointer; }
+  details.check > summary::-webkit-details-marker { display: none; }
+  details.check > summary:focus-visible { outline: 2px solid var(--muted); outline-offset: 4px; border-radius: 4px; }
+  .chev { width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+    transform: rotate(45deg); flex: none; margin-left: 4px; position: relative; top: -2px; transition: transform .15s; }
+  details[open] .chev { transform: rotate(-135deg); top: 2px; }
+  .details { margin: 12px 0 4px 20px; padding-top: 12px; border-top: 1px dashed var(--line); font-size: 13px; }
+  .details dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; }
+  .details dt { color: var(--muted); }
+  .details dd { margin: 0; overflow-wrap: anywhere; }
+  .details code { font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--empty); padding: 1px 4px; border-radius: 4px; }
+  .details h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 16px 0 6px; }
+  .spark { width: 100%; height: 70px; display: block; background: var(--empty); border-radius: 6px; }
+  .spark path { fill: none; stroke: var(--up); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+  .spark .failmark { fill: var(--down); opacity: .35; }
+  .details .legend { margin-left: 0; }
+  .inc { list-style: none; margin: 0; padding: 0; } .inc li { display: flex; gap: 8px; align-items: center; padding: 2px 0; }
+  .muted { color: var(--muted); }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .links a { color: var(--text); text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; }
+  .links a:hover { background: var(--empty); }
+  @media (max-width: 560px) { .details dl { grid-template-columns: 1fr; gap: 2px; } .details dd { margin-bottom: 6px; } }
 </style>
 </head>
 <body>
@@ -93,6 +115,76 @@ function dayBars(days, n = 90) {
   return out.join('');
 }
 
+const openIds = new Set();
+document.addEventListener('toggle', (e) => {
+  const id = e.target?.dataset?.id;
+  if (!id) return;
+  e.target.open ? openIds.add(id) : openIds.delete(id);
+}, true);
+
+const fmtTime = (sec) => new Date(sec * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+const fmtDur = (s) => (s < 3600 ? `${Math.max(1, Math.round(s / 60))} min` : s < 172800 ? `${(s / 3600).toFixed(1)} h` : `${Math.round(s / 86400)} days`);
+
+function whatIsChecked(c) {
+  const code = (t) => `<code>${esc(t)}</code>`;
+  switch (c.type) {
+    case 'page':
+      return `GET ${code(c.url)}, expects HTTP 200${c.contains ? `, page containing ${code(c.contains)}` : ''}${c.assets !== false ? ', and its script bundles load' : ''}.`;
+    case 'http':
+      return `${c.method || 'GET'} ${code(c.url)}${c.body ? ` with body ${code(JSON.stringify(c.body))}` : ''}, expects HTTP ${c.expectStatus ?? 200}.`;
+    case 'graphql':
+      return `POST ${code(c.url)} with ${code(c.query)}, expects ${code(c.expect.path)} = ${code(JSON.stringify(c.expect.equals))}.`;
+    case 'cors':
+      return `OPTIONS preflight to ${code(c.url)} from ${code(c.origin)}, expects that origin to be allowed.`;
+    case 'workflow':
+      return `Latest completed run of ${code(c.workflow)} in ${code(c.repo)} must have succeeded${c.maxAgeHours ? `, and the last success must be under ${c.maxAgeHours} h old` : ''}.`;
+  }
+  return '';
+}
+
+function incidents(h) {
+  const out = [];
+  let cur = null;
+  for (const [t, s] of h) {
+    if (s === 2) { if (!cur) cur = { start: t, end: null, n: 0 }; cur.n++; cur.last = t; }
+    else if (cur) { cur.end = t; out.push(cur); cur = null; }
+  }
+  if (cur) out.push(cur);
+  return out.reverse();
+}
+
+function sparkline(h, nowSec) {
+  const pts = h.filter((x) => x[0] >= nowSec - 86400 && x[2] != null);
+  if (pts.length < 2) return '<div class="muted">Not enough data yet.</div>';
+  const W = 600, H = 70, max = Math.max(...pts.map((p) => p[2]), 100);
+  const x = (t) => ((t - (nowSec - 86400)) / 86400) * W;
+  const y = (ms) => H - 4 - (ms / max) * (H - 8);
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)},${y(p[2]).toFixed(1)}`).join('');
+  const fails = pts.filter((p) => p[1] === 2).map((p) => `<rect x="${(x(p[0]) - 1.5).toFixed(1)}" y="0" width="3" height="${H}" class="failmark"/>`).join('');
+  const avg = Math.round(pts.reduce((a, p) => a + p[2], 0) / pts.length);
+  const sorted = pts.map((p) => p[2]).sort((a, b) => a - b);
+  const p95 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))];
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="spark" role="img" aria-label="Response time, last 24 hours">${fails}<path d="${line}"/></svg>
+    <div class="legend"><span>24 h ago</span><span>avg ${avg} ms · p95 ${p95} ms · max ${Math.round(max)} ms</span><span>now</span></div>`;
+}
+
+function detailsHtml(c, r, h, nowSec) {
+  const rows = [
+    ['Checks', whatIsChecked(c)],
+    ['Runs', `every ${c.everyMinutes || 5} min${c.slowMs ? ` · slower than ${c.slowMs} ms counts as degraded` : ''}`],
+    ['Last check', `${fmtTime(r.checkedAt)}${r.ms != null && c.type !== 'workflow' ? ` · ${r.ms} ms` : ''}`],
+    ['Result', `<span class="msg ${r.state}" style="margin:0">${esc(r.message)}</span>`],
+  ];
+  if (r.state === 'down') rows.push(['Down since', `${fmtTime(Date.parse(r.downSince) / 1000)} (${fmtDur(nowSec - Date.parse(r.downSince) / 1000)}) · ${r.failures} failed checks in a row`]);
+  const inc = incidents(h).slice(0, 5);
+  const incHtml = inc.length
+    ? `<ul class="inc">${inc.map((i) => `<li><span class="dot s2"></span>${fmtTime(i.start)} · ${i.end ? `lasted ${fmtDur(i.end - i.start)}` : `ongoing, ${fmtDur(nowSec - i.start)}`} · ${i.n} failed check${i.n > 1 ? 's' : ''}</li>`).join('')}</ul>`
+    : '<div class="muted">No failures in the last 7 days.</div>';
+  return `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+    ${c.type !== 'workflow' ? `<h3>Response time</h3>${sparkline(h, nowSec)}` : ''}
+    <h3>Recent failures (7 days)</h3>${incHtml}`;
+}
+
 async function getJson(url) {
   const r = await fetch(url, { cache: 'no-store' });
   if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
@@ -130,17 +222,27 @@ async function render() {
       const u7 = uptime(h, nowSec - 7 * 86400);
       const st = STATE[r.state] ?? 3;
       const href = c.url && c.type === 'page' ? c.url : c.repo ? `https://github.com/${c.repo}/actions/workflows/${c.workflow}` : null;
-      const name = href ? `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(c.name)}</a>` : esc(c.name);
       const timing = c.type === 'workflow' ? '' : r.ms != null ? `<span class="wide">${r.ms} ms · </span>` : '';
       const ups = [u24 != null && `${pct(u24)} 24h`, u7 != null && `<span class="wide">${pct(u7)} 7d</span>`].filter(Boolean).join('<span class="wide"> · </span>');
-      html += `<div class="check">
-        <div class="row"><span class="dot s${st}" title="${NAMES[st]}"></span><span class="name">${name}</span>
-          <span class="right">${timing}${ups || NAMES[st]}</span></div>
-        ${c.description ? `<div class="desc">${esc(c.description)}</div>` : ''}
-        <div class="msg ${r.state}">${NAMES[st]}: ${esc(r.message)}${[r.issue && ['outage issue', r.issue], r.link && ['workflow run', r.link], r.state !== 'up' && r.log && ['check log', r.log]].filter(Boolean).map(([t, u]) => ` · <a href="${esc(u)}" target="_blank" rel="noopener">${t}</a>`).join('')} · ${ago(r.checkedAt)}</div>
-        <div class="bars">${dayBars(daily[c.id])}</div>
-        <div class="legend"><span><span class="full">90 days ago</span><span class="short" style="display:none">30 days ago</span></span><span>Today</span></div>
-      </div>`;
+      const links = [
+        r.issue && ['Outage issue', r.issue],
+        r.link && ['Latest workflow run', r.link],
+        r.log && ['Check log', r.log],
+        href && [c.type === 'page' ? 'Open site' : 'Workflow runs', href],
+      ].filter(Boolean);
+      html += `<details class="check" data-id="${esc(c.id)}"${openIds.has(c.id) ? ' open' : ''}>
+        <summary>
+          <div class="row"><span class="dot s${st}" title="${NAMES[st]}"></span><span class="name">${esc(c.name)}</span>
+            <span class="right">${timing}${ups || NAMES[st]}</span><span class="chev" aria-hidden="true"></span></div>
+          ${c.description ? `<div class="desc">${esc(c.description)}</div>` : ''}
+          <div class="msg ${r.state}">${NAMES[st]}: ${esc(r.message)} · ${ago(r.checkedAt)}</div>
+          <div class="bars">${dayBars(daily[c.id])}</div>
+          <div class="legend"><span><span class="full">90 days ago</span><span class="short" style="display:none">30 days ago</span></span><span>Today</span></div>
+        </summary>
+        <div class="details">${detailsHtml(c, r, h, nowSec)}
+          ${links.length ? `<div class="links">${links.map(([t, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${t} ↗</a>`).join('')}</div>` : ''}
+        </div>
+      </details>`;
     }
     html += '</div>';
   }

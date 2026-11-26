@@ -136,7 +136,7 @@ function whatIsChecked(c) {
     case 'page':
       return `GET ${code(c.url)}, expects HTTP 200${c.contains ? `, page containing ${code(c.contains)}` : ''}${c.assets !== false ? ', and its script bundles load' : ''}.`;
     case 'http':
-      return `${c.method || 'GET'} ${code(c.url)}${c.body ? ` with body ${code(JSON.stringify(c.body))}` : ''}, expects ${c.expectStatusBelow ? `any reply below HTTP ${c.expectStatusBelow}` : `HTTP ${c.expectStatus ?? 200}`}.`;
+      return `${c.method || 'GET'} ${c.networkConfig ? `${code(c.path)} on the ${code(c.domain)} server from Yostar's network config` : code(c.url)}${c.body ? ` with body ${code(JSON.stringify(c.body))}` : ''}, expects ${c.expectStatusBelow ? `any reply below HTTP ${c.expectStatusBelow}` : `HTTP ${c.expectStatus ?? 200}`}.`;
     case 'graphql':
       return `POST ${code(c.url)} with ${code(c.query)}, expects ${code(c.expect.path)} = ${code(JSON.stringify(c.expect.equals))}.`;
     case 'json':

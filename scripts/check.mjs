@@ -97,15 +97,27 @@ async function checkPage(c) {
   return { state: 'up', message: `HTTP ${res.status}` };
 }
 
+// Resolve a game domain (gs, as, u8...) from Yostar's network config, the same way the
+// game client and arkprts do, so the probe follows server moves.
+async function resolveGameUrl(c) {
+  const res = await req(c.networkConfig);
+  if (!res.ok) throw new Error(`network config HTTP ${res.status}`);
+  const content = JSON.parse((await res.json()).content);
+  const base = content.configs[content.funcVer].network[c.domain];
+  if (!base) throw new Error(`network config has no "${c.domain}" domain`);
+  return `${base.replace(/\/$/, '')}/${c.path}`;
+}
+
 async function checkHttp(c) {
+  if (c.networkConfig) c = { ...c, url: await resolveGameUrl(c) };
   const res = await req(c.url, {
     method: c.method || 'GET',
     headers: c.body ? { 'Content-Type': 'application/json' } : {},
     body: c.body ? JSON.stringify(c.body) : undefined,
   });
   if (c.expectStatusBelow) {
-    if (res.status >= c.expectStatusBelow) return { state: 'down', message: `HTTP ${res.status}${await bodySnippet(res)}` };
-    return { state: 'up', message: `answered HTTP ${res.status}${(await bodySnippet(res)).slice(0, 100)}` };
+    if (res.status >= c.expectStatusBelow) return { state: 'down', message: `${c.networkConfig ? `${c.url}: ` : ''}HTTP ${res.status}${await bodySnippet(res)}` };
+    return { state: 'up', message: `${c.networkConfig ? `${c.url} ` : ''}answered HTTP ${res.status}${(await bodySnippet(res)).slice(0, 100)}` };
   }
   const expected = c.expectStatus ?? 200;
   if (res.status !== expected) return { state: 'down', message: `expected HTTP ${expected}, got ${res.status}${await bodySnippet(res)}` };

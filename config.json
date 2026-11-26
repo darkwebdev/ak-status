@@ -147,24 +147,28 @@
         {
           "id": "yostar-u8",
           "name": "Game account server (u8)",
-          "description": "as.arknights.global token exchange answers an empty request with a non-5xx error",
+          "description": "token exchange on the u8 server listed in Yostar's network config answers an empty request with a non-5xx error",
           "type": "http",
           "method": "POST",
-          "url": "https://as.arknights.global/u8/user/v1/getToken",
           "body": {},
           "expectStatusBelow": 500,
-          "slowMs": 5000
+          "slowMs": 5000,
+          "networkConfig": "https://ak-conf.arknights.global/config/prod/official/network_config",
+          "domain": "u8",
+          "path": "user/v1/getToken"
         },
         {
           "id": "yostar-game-server",
           "name": "Game server",
-          "description": "gs.arknights.global account/login answers an empty request with a non-5xx error",
+          "description": "account/login on the game server listed in Yostar's network config answers an empty request with a non-5xx error",
           "type": "http",
           "method": "POST",
-          "url": "https://gs.arknights.global/account/login",
           "body": {},
           "expectStatusBelow": 500,
-          "slowMs": 5000
+          "slowMs": 5000,
+          "networkConfig": "https://ak-conf.arknights.global/config/prod/official/network_config",
+          "domain": "gs",
+          "path": "account/login"
         }
       ]
     },

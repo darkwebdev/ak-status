@@ -1,0 +1,183 @@
+{
+ "updatedAt": 1795897843,
+ "overall": "degraded",
+ "checks": {
+  "ak-events-storybook": {
+   "state": "up",
+   "message": "HTTP 200",
+   "ms": 152,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "yostar-remote-config": {
+   "state": "up",
+   "message": "valid JSON (1 top-level keys)",
+   "ms": 181,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "yostar-network-config": {
+   "state": "up",
+   "message": "content = \"{\\\"configVer\\\":\\\"1\\\",\\\"funcVer\\\":\\\"V074\\\",\\\"configs\\\":{\\\"V074\\\":{\\\"override\\\":t",
+   "ms": 190,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "ak-events": {
+   "state": "up",
+   "message": "HTTP 200",
+   "ms": 249,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "ak-chars": {
+   "state": "up",
+   "message": "HTTP 200",
+   "ms": 223,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "ric": {
+   "state": "up",
+   "message": "HTTP 200",
+   "ms": 232,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "full-login": {
+   "state": "unknown",
+   "message": "GitHub API HTTP 404 (private repo? add a STATUS_GH_TOKEN secret)",
+   "ms": 302,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "yostar-u8": {
+   "state": "up",
+   "message": "https://as.arknights.global/u8/user/v1/getToken answered HTTP 400: {\"msg\":\"Key: 'GetTokenV1Req.appCode' Error:Field validation for 'appCode' failed on the 'required_",
+   "ms": 406,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "yostar-game-server": {
+   "state": "up",
+   "message": "https://gs.arknights.global:8443/account/login answered HTTP 400: {\"statusCode\":400,\"error\":\"Bad Request\",\"message\":\"\\\"uid\\\" is required\",\"validation\":{\"source\":\"pa",
+   "ms": 487,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "yostar-asset-cdn": {
+   "state": "up",
+   "message": "hot_update_list.json for 26-11-19-09-03-43_d30fff: 14678 asset bundles",
+   "ms": 584,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "yostar-sdk-login": {
+   "state": "up",
+   "message": "Yostar replied Code 100400 (客户端参数有误:Key: 'SendEmail.Account' Error:Field validation for 'Account' failed on )",
+   "ms": 596,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "yostar-version": {
+   "state": "up",
+   "message": "Client 37.7.41 · Resources 26-11-19-09-03-43_d30fff",
+   "ms": 609,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "info": {
+    "Client": "37.7.41",
+    "Resources": "26-11-19-09-03-43_d30fff"
+   },
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "job-ak-events-scrape": {
+   "state": "up",
+   "message": "last run succeeded 2026-11-28T06:28Z",
+   "ms": 606,
+   "link": "https://github.com/darkwebdev/ak-events/actions/runs/46116715956",
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "job-ric-data": {
+   "state": "up",
+   "message": "last run succeeded 2026-11-28T09:54Z",
+   "ms": 641,
+   "link": "https://github.com/darkwebdev/ric/actions/runs/46132574023",
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "deploy-ak-chars": {
+   "state": "up",
+   "message": "last run succeeded 2026-08-26T18:52Z",
+   "ms": 641,
+   "link": "https://github.com/darkwebdev/ak-chars/actions/runs/33002019092",
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "job-ak-chars-data": {
+   "state": "up",
+   "message": "last run succeeded 2026-11-28T15:19Z",
+   "ms": 657,
+   "link": "https://github.com/darkwebdev/ak-chars/actions/runs/46158795170",
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "deploy-ak-events": {
+   "state": "up",
+   "message": "last run succeeded 2026-11-28T06:29Z",
+   "ms": 662,
+   "link": "https://github.com/darkwebdev/ak-events/actions/runs/46116785961",
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "api-cors": {
+   "state": "up",
+   "message": "https://darkwebdev.github.io allowed",
+   "ms": 7212,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "api-graphql": {
+   "state": "degraded",
+   "message": "slow: 7460 ms (limit 5000 ms)",
+   "ms": 7460,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "api-auth-endpoint": {
+   "state": "up",
+   "message": "HTTP 422 as expected",
+   "ms": 7456,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  },
+  "yostar-guest": {
+   "state": "degraded",
+   "message": "slow: 10554 ms (limit 10000 ms)",
+   "ms": 10554,
+   "checkedAt": 1795897843,
+   "failures": 0,
+   "log": "https://github.com/darkwebdev/ak-status/actions/runs/46186758943"
+  }
+ }
+}
